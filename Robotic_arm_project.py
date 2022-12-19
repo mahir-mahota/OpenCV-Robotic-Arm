@@ -22,12 +22,11 @@ cap.set(4, height)
 cap.set(3, width)
 
 hand_frame = 0
-prev_command = ""
 claw = ""
 turn = ""
 rotate = ""
 first_elbow = ""
-second_elbow = ""
+second_elbow = "up"
 
 #Initialise hands
 with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
@@ -65,7 +64,6 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
             original = landmarks
 
         if hand_frame > 30 and results.multi_hand_landmarks:
-            command = ""
 
             distance = math.hypot(landmarks[4][1] - landmarks[8][1], landmarks[4][2] - landmarks[8][2])
         
@@ -91,25 +89,33 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
 
             y_offset = original[9][2] - landmarks[9][2]
 
-            if y_offset > 100 and turn != "up":
+            if y_offset > 100 and first_elbow != "up":
                 print("move_up")
-                turn = "up"
+                first_elbow = "up"
         
-            if y_offset < -100 and turn != "down":
+            if y_offset < -100 and first_elbow != "down":
                 print("move_down")
-                turn = "down"
+                first_elbow = "down"
 
-            rotation = landmarks[13][2] - landmarks[16][2]
+            rotation = landmarks[17][2] - landmarks[20][2]
 
-            if rotation < 80 and landmarks[16][1] < landmarks[13][1] and rotate != "right":
+            if rotation < 80 and landmarks[20][1] < landmarks[17][1] and rotate != "right":
                 print("rotate_right")
                 rotate = "right"
 
-            elif rotation < 80 and landmarks[16][1] > landmarks[13][1] and rotate != "left":
+            elif rotation < 80 and landmarks[20][1] > landmarks[17][1] and rotate != "left":
                 print("rotate_left")
                 rotate = "left"
-        
-            prev_command = command
+
+            finger_straightness = abs(landmarks[16][1] - landmarks[14][1])
+
+            if landmarks[16][2] > landmarks[14][2] and finger_straightness < 10 and second_elbow != "down":
+                print("adjust_down")
+                second_elbow = "down"
+
+            if landmarks[16][2] < landmarks[14][2] and finger_straightness < 10 and second_elbow != "up":
+                print("adjust_up")
+                second_elbow = "up"
 
         cv2.imshow('Output', cv2.flip(image, 1))
 
