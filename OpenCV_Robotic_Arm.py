@@ -22,7 +22,7 @@ cap.set(4, height)
 cap.set(3, width)
 
 hand_frame = 0
-claw = ""
+claw = "opened"
 turn = ""
 rotate = ""
 first_elbow = ""
@@ -30,7 +30,7 @@ second_elbow = "up"
 reset = True
 
 #Initialise hands
-with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
+with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.6, min_tracking_confidence=0.5) as hands:
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -68,13 +68,14 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
         if hand_frame > 30 and results.multi_hand_landmarks:
 
             distance = math.hypot(landmarks[4][1] - landmarks[8][1], landmarks[4][2] - landmarks[8][2])
+            original_distance = math.hypot(original[4][1] - original[8][1], original[4][2] - original[8][2])
         
             if distance < 70 and claw != "closed":
                 print("close_claw")
                 claw = "closed"
                 ##Arduino.write(command.encode())
                 
-            elif distance > 220 and claw != "opened":
+            elif distance > (original_distance - 30) and claw != "opened":
                 print("open_claw")
                 claw = "opened"
                 ##Arduino.write(command.encode())
@@ -101,11 +102,11 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
 
             rotation = landmarks[17][2] - landmarks[20][2]
 
-            if rotation < 80 and landmarks[20][1] < landmarks[17][1] and rotate != "right":
+            if rotation < 40 and landmarks[20][1] < landmarks[17][1] and rotate != "right":
                 print("rotate_right")
                 rotate = "right"
 
-            elif rotation < 80 and landmarks[20][1] > landmarks[17][1] and rotate != "left":
+            elif rotation < 40 and landmarks[20][1] > landmarks[17][1] and rotate != "left":
                 print("rotate_left")
                 rotate = "left"
 
@@ -129,7 +130,7 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
 
         elif not results.multi_hand_landmarks and not reset:
             hand_frame = 0
-            claw = ""
+            claw = "opened"
             turn = ""
             rotate = ""
             first_elbow = ""
