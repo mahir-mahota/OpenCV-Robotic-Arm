@@ -27,6 +27,7 @@ turn = ""
 rotate = ""
 first_elbow = ""
 second_elbow = "up"
+reset = True
 
 #Initialise hands
 with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracking_confidence=0.5) as hands:
@@ -62,13 +63,14 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
 
         if hand_frame == 30:
             original = landmarks
+            print("Hand registered")
 
         if hand_frame > 30 and results.multi_hand_landmarks:
 
             distance = math.hypot(landmarks[4][1] - landmarks[8][1], landmarks[4][2] - landmarks[8][2])
         
             if distance < 70 and claw != "closed":
-                print("claw_closed")
+                print("close_claw")
                 claw = "closed"
                 ##Arduino.write(command.encode())
                 
@@ -109,11 +111,11 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
 
             finger_straightness = abs(landmarks[16][1] - landmarks[14][1])
 
-            if landmarks[16][2] > landmarks[14][2] and finger_straightness < 10 and second_elbow != "down":
+            if landmarks[16][2] > landmarks[14][2] and finger_straightness < 25 and second_elbow != "down":
                 print("adjust_down")
                 second_elbow = "down"
 
-            if landmarks[16][2] < landmarks[14][2] and finger_straightness < 10 and second_elbow != "up":
+            if landmarks[16][2] < landmarks[14][2] and finger_straightness < 25 and second_elbow != "up":
                 print("adjust_up")
                 second_elbow = "up"
 
@@ -122,11 +124,20 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.8, min_tracki
         prev_landmarks = landmarks
 
         if results.multi_hand_landmarks:
-          hand_frame += 1
-        elif not results.multi_hand_landmarks:
-          hand_frame = 0
+            hand_frame += 1
+            reset = False
+
+        elif not results.multi_hand_landmarks and not reset:
+            hand_frame = 0
+            claw = ""
+            turn = ""
+            rotate = ""
+            first_elbow = ""
+            second_elbow = "up"
+            print("reset")
+            reset = True
     
         if cv2.waitKey(5) & 0xFF == ord('q'):
-          break
+            break
 
 cap.release()
