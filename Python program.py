@@ -3,13 +3,12 @@ import numpy as np
 import math
 import mediapipe as mp
 import serial
-import time
 
 #Initialise serial communication
-##Arduino = serial.Serial("<port>", 9600)
-##Arduino.timeout = 1
+Arduino = serial.Serial("COM8", 9600)
+Arduino.timeout = 1
 
-#mediapipe hand detection
+#MediaPipe hand detection
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
@@ -23,14 +22,25 @@ cap.set(3, width)
 
 hand_frame = 0
 claw = "opened"
-turn = ""
 rotate = ""
-first_elbow = ""
-second_elbow = "up"
+elbow = "up"
 reset = True
 
+close_claw = 'A'
+open_claw = 'B'
+turn_right = 'C'
+turn_left = 'D'
+rotate_right = 'E'
+rotate_left = 'F'
+adjust_up = 'G'
+adjust_down = 'H'
+reset_ascii = 'I'
+rotate_reset = 'J'
+#move_up = 'K'
+#move_down = 'L'
+
 #Initialise hands
-with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.6, min_tracking_confidence=0.5) as hands:
+with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.6, min_tracking_confidence=0.5, max_num_hands = 1) as hands:
     while cap.isOpened():
         success, image = cap.read()
         if not success:
@@ -72,53 +82,62 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.6, min_tracki
         
             if distance < 70 and claw != "closed":
                 print("close_claw")
+                Arduino.write(close_claw.encode())
                 claw = "closed"
-                ##Arduino.write(command.encode())
                 
             elif distance > (original_distance - 30) and claw != "opened":
                 print("open_claw")
+                Arduino.write(open_claw.encode())
                 claw = "opened"
-                ##Arduino.write(command.encode())
         
             x_offset = original[9][1] - landmarks[9][1]
 
-            if x_offset > 300 and turn != "right":
+            if x_offset > 300:
                 print("turn_right")
-                turn = "right"
+                Arduino.write(turn_right.encode())
         
-            if x_offset < -300 and turn != "left":
+            if x_offset < -300:
                 print("turn_left")
-                turn = "left"
+                Arduino.write(turn_left.encode())
 
-            y_offset = original[9][2] - landmarks[9][2]
+            #y_offset = original[9][2] - landmarks[9][2]
 
-            if y_offset > 100 and first_elbow != "up":
-                print("move_up")
-                first_elbow = "up"
+            #if y_offset > 100:
+            #    print("move_up")
+            #    Arduino.write("move_up".encode())
         
-            if y_offset < -100 and first_elbow != "down":
-                print("move_down")
-                first_elbow = "down"
+            #if y_offset < -100:
+            #    print("move_down")
+            #    Arduino.write("move_down".encode())
 
             rotation = landmarks[17][2] - landmarks[20][2]
 
             if rotation < 40 and landmarks[20][1] < landmarks[17][1] and rotate != "right":
                 print("rotate_right")
+                Arduino.write(rotate_right.encode())
                 rotate = "right"
 
             elif rotation < 40 and landmarks[20][1] > landmarks[17][1] and rotate != "left":
                 print("rotate_left")
+                Arduino.write(rotate_left.encode())
                 rotate = "left"
+
+            elif rotation < 120 and rotation > 80 and rotate != "reset":
+                print("rotate_reset")
+                Arduino.write(rotate_reset.encode())
+                rotate = "reset"
 
             finger_straightness = abs(landmarks[16][1] - landmarks[14][1])
 
-            if landmarks[16][2] > landmarks[14][2] and finger_straightness < 25 and second_elbow != "down":
-                print("adjust_down")
-                second_elbow = "down"
-
-            if landmarks[16][2] < landmarks[14][2] and finger_straightness < 25 and second_elbow != "up":
+            if landmarks[16][2] < landmarks[14][2] and finger_straightness < 25 and elbow != "up":
                 print("adjust_up")
-                second_elbow = "up"
+                Arduino.write(adjust_up.encode())
+                elbow = "up"
+
+            if landmarks[16][2] > landmarks[14][2] and finger_straightness < 25 and elbow != "down":
+                print("adjust_down")
+                Arduino.write(adjust_down.encode())
+                elbow = "down"
 
         cv2.imshow('Output', cv2.flip(image, 1))
 
@@ -136,9 +155,11 @@ with mp_hands.Hands(model_complexity=0, min_detection_confidence=0.6, min_tracki
             first_elbow = ""
             second_elbow = "up"
             print("reset")
+            Arduino.write(reset_ascii.encode())
             reset = True
     
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 
 cap.release()
+Arduino.close()
